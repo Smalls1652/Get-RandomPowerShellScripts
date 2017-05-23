@@ -26,8 +26,8 @@ Function Download-FiletoPath
 Function Download-SPCImages
 {
 	param (
-	[Parameter(Mandatory = $true)]
-	[string]$Path
+		[Parameter(Mandatory = $true)]
+		[string]$Path
 	)
 	begin
 	{
@@ -109,6 +109,7 @@ Function Download-SPCImages
 
 Function Download-WPCImages
 {
+	[cmdletbinding()]
 	param (
 		[Parameter(Mandatory = $true)]
 		[string]$Path
@@ -119,7 +120,10 @@ Function Download-WPCImages
 		$seed = Get-Random
 		
 		#Create folders
+		Write-Verbose "Creating WPC folders."
 		New-Item -Path "$Path\WPC" -ItemType Directory | Out-Null
+		New-Item -Path "$Path\WPC\Short Range Forecasts" -ItemType Directory | Out-Null
+		New-Item -Path "$Path\WPC\Conus" -ItemType Directory | Out-Null
 		
 		#Gathering Data for the WPC Short Range Forecasts page.
 		$wpc = Invoke-WebRequest -Uri "http://www.wpc.ncep.noaa.gov/basicwx/basicwx_ndfd.php?$seed"
@@ -131,11 +135,37 @@ Function Download-WPCImages
 	
 	process
 	{
+		#Short range forecasts download
+		$i = 0
 		foreach ($forecast in $wpcPage)
 		{
+			$i++
 			$alt = $forecast | Select-Object -ExpandProperty "alt"
 			$image = "http://www.wpc.ncep.noaa.gov/basicwx/" + ($forecast | Select-Object -ExpandProperty "nameProp") + "?$seed"
-			Download-FiletoPath -Download $image -Path "$Path\WPC\$alt.gif"
+			Write-Verbose "Downloading image $image with to ""$Path\WPC\Short Range Forecasts\$i - $alt.gif"""
+			Download-FiletoPath -Download $image -Path "$Path\WPC\Short Range Forecasts\$i - $alt.gif"
+		}
+		
+		#Days 1-3 Forecast Charts
+		$y = 1
+		while ($y -le 3)
+		{
+			$image = "http://www.wpc.ncep.noaa.gov/noaa/noaad" + $y + ".gif?" + $seed
+			Write-Verbose "Downloading image $image with to ""$Path\WPC\Day $y.gif"""
+			Download-FiletoPath -Download $image -Path "$Path\WPC\Day $y.gif"
+			$y++
+		}
+		
+		#Days 3-8 Conus
+		$z = 3
+		while ($z -le 8)
+		{
+			$conusWPC = (Invoke-WebRequest -Uri "http://www.wpc.ncep.noaa.gov/medr/nav_conus_pmsl.php?fday=$z&fcolor=wbg&$seed").Images
+			$image = "http://www.wpc.ncep.noaa.gov" + $conusWPC.src + "?$seed"
+			$name = $conusWPC.alt
+			Write-Verbose "Downloading image $image with to ""$Path\WPC\Conus\$name.gif"""
+			Download-FiletoPath -Download $image -Path "$Path\WPC\Conus\$name.gif"
+			$z++
 		}
 	}
 }
