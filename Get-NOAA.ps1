@@ -142,7 +142,7 @@ Function Download-WPCImages
 			$i++
 			$alt = $forecast | Select-Object -ExpandProperty "alt"
 			$image = "http://www.wpc.ncep.noaa.gov/basicwx/" + ($forecast | Select-Object -ExpandProperty "nameProp") + "?$seed"
-			Write-Verbose "Downloading image $image with to ""$Path\WPC\Short Range Forecasts\$i - $alt.gif"""
+			Write-Verbose "Downloading image from $image"
 			Download-FiletoPath -Download $image -Path "$Path\WPC\Short Range Forecasts\$i - $alt.gif"
 		}
 		
@@ -151,7 +151,7 @@ Function Download-WPCImages
 		while ($y -le 3)
 		{
 			$image = "http://www.wpc.ncep.noaa.gov/noaa/noaad" + $y + ".gif?" + $seed
-			Write-Verbose "Downloading image $image with to ""$Path\WPC\Day $y.gif"""
+			Write-Verbose "Downloading image from $image"
 			Download-FiletoPath -Download $image -Path "$Path\WPC\Day $y.gif"
 			$y++
 		}
@@ -163,16 +163,48 @@ Function Download-WPCImages
 			$conusWPC = (Invoke-WebRequest -Uri "http://www.wpc.ncep.noaa.gov/medr/nav_conus_pmsl.php?fday=$z&fcolor=wbg&$seed").Images
 			$image = "http://www.wpc.ncep.noaa.gov" + $conusWPC.src + "?$seed"
 			$name = $conusWPC.alt
-			Write-Verbose "Downloading image $image with to ""$Path\WPC\Conus\$name.gif"""
+			Write-Verbose "Downloading image from $image"
 			Download-FiletoPath -Download $image -Path "$Path\WPC\Conus\$name.gif"
 			$z++
 		}
+		
+		#Current Surface Front Analysis
+		$sfcCurFrontWeb = Invoke-WebRequest -Uri "http://www.wpc.ncep.noaa.gov/archives/web_pages/sfc/sfc_archive_maps.php?maptype=usfntsfc&$seed"
+		
+		$sfcCurFrontSplit = ($sfcCurFrontWeb.Images | Where-Object -Property "alt" -eq "Archived Surface Analysis" | Select-Object -ExpandProperty "src").split("/")
+		$sfcCurFrontImage = "http://www.wpc.ncep.noaa.gov/archives/sfc/" + $sfcCurFrontSplit[3] + "/" + $sfcCurFrontSplit[4] + "?$seed"
+		Write-Verbose "Downloading image from $sfcCurFrontImage"
+		Download-FiletoPath -Download $sfcCurFrontImage -Path "$Path\WPC\Current Surface Front Analysis.gif"
+		Download-FiletoPath -Download "http://www.wpc.ncep.noaa.gov/sfc/lrgnamsfcwbg.gif?$seed" -Path "$Path\WPC\Current Surface Front Analysis_HiRes.gif"
 	}
 }
 
-
+Function Download-NWSDiscussion
+{
+	[cmdletbinding()]
+	param (
+		[Parameter(Mandatory = $true)]
+		[string]$Station,
+		[Parameter(Mandatory = $true)]
+		[string]$Path
+	)
+	begin
+	{
+		#Create folders
+		Write-Verbose "Creating local station discussion folders."
+		New-Item -Path "$Path\$Station" -ItemType Directory | Out-Null
+		
+		$afdNWS = Invoke-WebRequest -Uri "http://forecast.weather.gov/product.php?site=$Station&issuedby=$Station&product=AFD&format=txt&glossary=0"
+		
+	}
+	Process
+	{
+		$afdNWS.ParsedHtml.body.getElementsByClassName("glossaryProduct") | Select-Object -ExpandProperty "innerHTML" | Out-File "$Path\$Station\AFD.txt"
+	}
+}
 $curDateTime = Get-Date -Format "MM-dd-yyyy_HH-mm"
 New-Item -Path "$env:USERPROFILE\NOAA\$curDateTime" -ItemType Directory
 
 Download-SPCImages -Path "$env:USERPROFILE\NOAA\$curDateTime"
-Download-WPCImages -Path "$env:USERPROFILE\NOAA\$curDateTime"
+Download-WPCImages -Path "$env:USERPROFILE\NOAA\$curDateTime" -Verbose
+Download-NWSDiscussion -Path "$env:USERPROFILE\NOAA\$curDateTime" -Station <CHOOSE YOUR STATION>
