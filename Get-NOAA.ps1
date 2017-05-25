@@ -47,61 +47,58 @@ Function Download-SPCImages
 		$spc3 = Invoke-WebRequest -Uri "http://www.spc.noaa.gov/products/outlook/day3otlk.html?$seed"
 		
 		#Getting the simplified print version of the outlook pages
-		$SpcDay1URL = (($spc1.ParsedHtml.getElementsByTagName("a") | Where-Object -Property "textContent" -eq "Print Version" | Select-Object -ExpandProperty "href").Trim("about:").Insert(0, "http://www.spc.noaa.gov/products/outlook/")) + "?$seed"
-		$SpcDay2URL = (($spc2.ParsedHtml.getElementsByTagName("a") | Where-Object -Property "textContent" -eq "Print Version" | Select-Object -ExpandProperty "href").Trim("about:").Insert(0, "http://www.spc.noaa.gov/products/outlook/")) + "?$seed"
-		$SpcDay3URL = (($spc3.ParsedHtml.getElementsByTagName("a") | Where-Object -Property "textContent" -eq "Print Version" | Select-Object -ExpandProperty "href").Trim("about:").Insert(0, "http://www.spc.noaa.gov/products/outlook/")) + "?$seed"
+		$SpcDay1URL = $spc1.Links | Where-Object -Property "innerHTML" -eq "Print Version" | Select-Object -ExpandProperty "href"
+		$SpcDay2URL = $spc2.Links | Where-Object -Property "innerHTML" -eq "Print Version" | Select-Object -ExpandProperty "href"
+		$SpcDay3URL = $spc3.Links | Where-Object -Property "innerHTML" -eq "Print Version" | Select-Object -ExpandProperty "href"
 		
 		#Loading the print version pages of the outlook pages into memory
-		$spcDay1 = Invoke-WebRequest -Uri $spcDay1URL
-		$spcDay2 = Invoke-WebRequest -Uri $spcDay2URL
-		$spcDay3 = Invoke-WebRequest -Uri $spcDay3URL
+		$spcDay1 = Invoke-WebRequest -Uri ("http://www.spc.noaa.gov/products/outlook/" + $spcDay1URL + "?$seed")
+		$spcDay2 = Invoke-WebRequest -Uri ("http://www.spc.noaa.gov/products/outlook/" + $spcDay2URL + "?$seed")
+		$spcDay3 = Invoke-WebRequest -Uri ("http://www.spc.noaa.gov/products/outlook/" + $spcDay3URL + "?$seed")
 	}
 	
 	Process
 	{
 		#SPC Day 1
 		$spcDay1Text = $spcDay1.ParsedHtml.body.getElementsByTagName("pre") | Select-Object -ExpandProperty "outerText"
-		$spcDay1imgs = $spcDay1.ParsedHtml.body.getElementsByTagName("img") | Select-Object -ExpandProperty "href" -Skip 2
+		$spcDay1imgs = $spcDay1.Images | Select-Object -ExpandProperty "src" -Skip 2
 		
 		$spcDay1Text | Out-File -FilePath "$Path\SPC\Day01\Text.txt"
 		
 		$spcDay1full = @{ }
 		foreach ($img in $spcDay1imgs)
 		{
-			$parseLink = $img.Trim("about:")
-			$joinedLink = "http://www.spc.noaa.gov/products/outlook/$parseLink"
-			$spcDay1full += @{ $parseLink = $joinedLink }
-			Download-FiletoPath -Download $joinedLink -Path "$Path\SPC\Day01\$parseLink"
+			$joinedLink = "http://www.spc.noaa.gov/products/outlook/$img" + "?$seed"
+			$spcDay1full += @{ $img = $joinedLink }
+			Download-FiletoPath -Download $joinedLink -Path "$Path\SPC\Day01\$img"
 		}
 		
 		#SPC Day 2
 		$spcDay2Text = $spcDay2.ParsedHtml.body.getElementsByTagName("pre") | Select-Object -ExpandProperty "outerText"
-		$spcDay2imgs = $spcDay2.ParsedHtml.body.getElementsByTagName("img") | Select-Object -ExpandProperty "href" -Skip 2
+		$spcDay2imgs = $spcDay2.Images | Select-Object -ExpandProperty "src" -Skip 2
 		
 		$spcDay2Text | Out-File -FilePath "$Path\SPC\Day02\Text.txt"
 		
 		$spcDay2full = @{ }
 		foreach ($img in $spcDay2imgs)
 		{
-			$parseLink = $img.Trim("about:")
-			$joinedLink = "http://www.spc.noaa.gov/products/outlook/$parseLink"
-			$spcDay2full += @{ $parseLink = $joinedLink }
-			Download-FiletoPath -Download $joinedLink -Path "$Path\SPC\Day02\$parseLink"
+			$joinedLink = "http://www.spc.noaa.gov/products/outlook/$img" + "?$seed"
+			$spcDay2full += @{ $img = $joinedLink }
+			Download-FiletoPath -Download $joinedLink -Path "$Path\SPC\Day02\$img"
 		}
 		
 		#SPC Day 3
 		$spcDay3Text = $spcDay3.ParsedHtml.body.getElementsByTagName("pre") | Select-Object -ExpandProperty "outerText"
-		$spcDay3imgs = $spcDay3.ParsedHtml.body.getElementsByTagName("img") | Select-Object -ExpandProperty "href" -Skip 2
+		$spcDay3imgs = $spcDay3.Images | Select-Object -ExpandProperty "src" -Skip 2
 		
 		$spcDay3Text | Out-File -FilePath "$Path\SPC\Day03\Text.txt"
 		
 		$spcDay3full = @{ }
 		foreach ($img in $spcDay3imgs)
 		{
-			$parseLink = $img.Trim("about:")
-			$joinedLink = "http://www.spc.noaa.gov/products/outlook/$parseLink"
-			$spcDay3full += @{ $parseLink = $joinedLink }
-			Download-FiletoPath -Download $joinedLink -Path "$Path\SPC\Day03\$parseLink"
+			$joinedLink = "http://www.spc.noaa.gov/products/outlook/$img" + "?$seed"
+			$spcDay3full += @{ $img = $joinedLink }
+			Download-FiletoPath -Download $joinedLink -Path "$Path\SPC\Day03\$img"
 		}
 	}
 	
@@ -123,13 +120,13 @@ Function Download-WPCImages
 		Write-Verbose "Creating WPC folders."
 		New-Item -Path "$Path\WPC" -ItemType Directory | Out-Null
 		New-Item -Path "$Path\WPC\Short Range Forecasts" -ItemType Directory | Out-Null
-		New-Item -Path "$Path\WPC\Conus" -ItemType Directory | Out-Null
+		New-Item -Path "$Path\WPC\Medium Range Forecasts" -ItemType Directory | Out-Null
 		
 		#Gathering Data for the WPC Short Range Forecasts page.
 		$wpc = Invoke-WebRequest -Uri "http://www.wpc.ncep.noaa.gov/basicwx/basicwx_ndfd.php?$seed"
 		
 		#Query the specific web elements we want.
-		$wpcPage = $wpc.ParsedHtml.body.getElementsByTagName("img") | Where-Object -Property "alt" -like "Forecast valid *"
+		$wpcPage = $wpc.Images | Where-Object -Property "alt" -like "Forecast valid *"
 		
 	}
 	
@@ -141,7 +138,7 @@ Function Download-WPCImages
 		{
 			$i++
 			$alt = $forecast | Select-Object -ExpandProperty "alt"
-			$image = "http://www.wpc.ncep.noaa.gov/basicwx/" + ($forecast | Select-Object -ExpandProperty "nameProp") + "?$seed"
+			$image = "http://www.wpc.ncep.noaa.gov" + ($forecast | Select-Object -ExpandProperty "src") + "?$seed"
 			Write-Verbose "Downloading image from $image"
 			Download-FiletoPath -Download $image -Path "$Path\WPC\Short Range Forecasts\$i - $alt.gif"
 		}
@@ -156,7 +153,7 @@ Function Download-WPCImages
 			$y++
 		}
 		
-		#Days 3-8 Conus
+		#Days 3-8 Medium Range Forecasts
 		$z = 3
 		while ($z -le 8)
 		{
@@ -164,7 +161,7 @@ Function Download-WPCImages
 			$image = "http://www.wpc.ncep.noaa.gov" + $conusWPC.src + "?$seed"
 			$name = $conusWPC.alt
 			Write-Verbose "Downloading image from $image"
-			Download-FiletoPath -Download $image -Path "$Path\WPC\Conus\$name.gif"
+			Download-FiletoPath -Download $image -Path "$Path\WPC\Medium Range Forecasts\$name.gif"
 			$z++
 		}
 		
@@ -207,4 +204,4 @@ New-Item -Path "$env:USERPROFILE\NOAA\$curDateTime" -ItemType Directory
 
 Download-SPCImages -Path "$env:USERPROFILE\NOAA\$curDateTime"
 Download-WPCImages -Path "$env:USERPROFILE\NOAA\$curDateTime" -Verbose
-Download-NWSDiscussion -Path "$env:USERPROFILE\NOAA\$curDateTime" -Station <CHOOSE YOUR STATION>
+Download-NWSDiscussion -Path "$env:USERPROFILE\NOAA\$curDateTime" -Station "Insert your local stationID"
