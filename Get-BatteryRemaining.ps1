@@ -9,7 +9,7 @@ This script gathers information about battery power on a macOS machine and outpu
 This script gathers information about battery power on a macOS machine and outputs it into the console. It uses pmset as the data source for battery data.
 
 .EXAMPLE
-./HelloWorld.ps1
+Get-BatteryRemaining
 
 #>
     begin
