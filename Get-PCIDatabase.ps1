@@ -2,6 +2,8 @@
 	Created by Tim Small (Smalls)
 	Github: https://github.com/Smalls1652
 	Version: 1.0
+
+	This script will no longer work due to PCIDatabase shutting down.
 #>
 
 Function Get-PCIDatabase
