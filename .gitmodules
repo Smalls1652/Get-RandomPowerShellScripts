@@ -1,0 +1,12 @@
+[submodule "Modules/CredentialManager"]
+	path = Modules/CredentialManager
+	url = https://github.com/Smalls1652/CredentialManager.git
+[submodule "Modules/Search-AD"]
+	path = Modules/Search-AD
+	url = https://github.com/Smalls1652/Search-AD.git
+[submodule "Modules/UWF-Management"]
+	path = Modules/UWF-Management
+	url = https://github.com/Smalls1652/UWF-Management.git
+[submodule "Imaging/Create-WindowsImage"]
+	path = Imaging/Create-WindowsImage
+	url = https://github.com/Smalls1652/Create-WindowsImage.git
