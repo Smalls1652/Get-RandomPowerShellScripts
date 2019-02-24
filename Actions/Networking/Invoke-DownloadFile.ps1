@@ -1,3 +1,44 @@
+
+<#PSScriptInfo
+
+.VERSION 0.1
+
+.GUID f396b874-a122-4f9f-a8b8-9c5ca793b557
+
+.AUTHOR Tim Small
+
+.COMPANYNAME 
+
+.COPYRIGHT 2019
+
+.TAGS web download webclient
+
+.LICENSEURI 
+
+.PROJECTURI https://github.com/Smalls1652/Get-RandomPowerShellScripts/blob/master/Actions/Networking/Invoke-DownloadFile.ps1
+
+.ICONURI 
+
+.EXTERNALMODULEDEPENDENCIES 
+
+.REQUIREDSCRIPTS 
+
+.EXTERNALSCRIPTDEPENDENCIES 
+
+.RELEASENOTES
+Initial release.
+
+.PRIVATEDATA 
+
+#>
+
+<# 
+
+.DESCRIPTION 
+ Download files from the internet through PowerShell. 
+
+#>
+
 [CmdletBinding()]
 param(
     [Parameter(Mandatory = $true)][string]$Url,
