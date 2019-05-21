@@ -1,36 +1,38 @@
 
 <#PSScriptInfo
 
-.VERSION 0.1
+.VERSION 19.05.21
 
-.GUID f396b874-a122-4f9f-a8b8-9c5ca793b557
+.GUID d1de0de3-d0f2-4094-a2f2-f75cd8d0fab3
 
 .AUTHOR Tim Small
 
-.COMPANYNAME 
+.COMPANYNAME
 
 .COPYRIGHT 2019
 
 .TAGS web download webclient
 
-.LICENSEURI 
+.LICENSEURI
 
 .PROJECTURI https://github.com/Smalls1652/Get-RandomPowerShellScripts/blob/master/Actions/Networking/Invoke-DownloadFile.ps1
 
-.ICONURI 
+.ICONURI
 
 .EXTERNALMODULEDEPENDENCIES 
 
-.REQUIREDSCRIPTS 
+.REQUIREDSCRIPTS
 
-.EXTERNALSCRIPTDEPENDENCIES 
+.EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-Initial release.
+Fixed paths with no filename to use the name of the downloaded file.
 
-.PRIVATEDATA 
+.PRIVATEDATA
 
-#>
+#> 
+
+
 
 <# 
 
@@ -39,7 +41,7 @@ Initial release.
 
 #>
 
-[CmdletBinding()]
+[CmdletBinding(SupportsShouldProcess)]
 param(
     [Parameter(Mandatory = $true)][string]$Url,
     [string]$Path
@@ -63,11 +65,27 @@ function convertFileSize {
 
 Write-Verbose "URL set to ""$($Url)""."
 
-if (!($Path)) {
-    Write-Verbose "Path parameter not set, parsing Url for filename."
-    $URLParser = $Url | Select-String -Pattern ".*\:\/\/.*\/(.*\.{1}\w*).*" -List
+switch ($Path) {
+    { ([regex]::Match($PSItem, "(?:(?:.+[\/\\]){2,}(?:(?'fileName'.+)|)|.+)").Groups | Where-Object -Property "Name" -eq "fileName" | Select-Object -ExpandProperty "Success") -eq $false } {
+        Write-Verbose "Path parameter set, but no filename. Parsing Url for filename."
+        if (!([regex]::Match($Path, "^.+[\/\\]$") | Select-Object -ExpandProperty "Success")) {
+            if ($Path.ToCharArray() -contains "/") {
+                $Path = "$($Path)/"
+            }
+            elseif ($Path.ToCharArray() -contains "\") {
+                $Path = "$($Path)\"
+            }
+        }
+        $URLParser = $Url | Select-String -Pattern ".*\:\/\/.*\/(.*\.{1}\w*).*" -List
 
-    $Path = "./$($URLParser.Matches.Groups[1].Value)"
+        $Path = "$($Path)$($URLParser.Matches.Groups[1].Value)"
+    }
+    { ($PSItem -eq $null) } {
+        Write-Verbose "Path parameter not set, parsing Url for filename."
+        $URLParser = $Url | Select-String -Pattern ".*\:\/\/.*\/(.*\.{1}\w*).*" -List
+
+        $Path = "./$($URLParser.Matches.Groups[1].Value)"
+    }
 }
 
 Write-Verbose "Path set to ""$($Path)""."
