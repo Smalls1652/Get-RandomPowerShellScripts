@@ -1,66 +1,141 @@
-﻿function Get-LoggedOn
-{
+﻿<#PSScriptInfo
 
-<#
-	.SYNOPSIS
-		This function allows you to get the current logged on user for a machine.
-    
-    .DESCRIPTION
-         This function allows you to get the current logged on user for a machine. It uses WMI, rather than CIM for compatability purposes with machines still running PowerShell 2.0.
+.VERSION 19.5.7
 
-	.EXAMPLE
-        Get-LoggedOn
+.GUID e71290ae-d605-4ee6-88f4-c70f86ca9385
 
-        To return the logged on username of the local machine.
-		
-	.EXAMPLE
-        Get-LoggedOn -ComputerName Example1
+.AUTHOR Tim Small
 
-        To return the logged on username of a remote machine.
+.COMPANYNAME Smalls.Online
 
-    .EXAMPLE
-        Get-LoggedOn -ComputerName Example1,Example2,Example3
+.COPYRIGHT 2019
 
-        To return the logged on username of multiple remote machines.
+.TAGS 
 
-	.PARAMETER ComputerName
-		The computer name that you would like to retieve information from.
-	
+.LICENSEURI 
+
+.PROJECTURI 
+
+.ICONURI 
+
+.EXTERNALMODULEDEPENDENCIES 
+
+.REQUIREDSCRIPTS 
+
+.EXTERNALSCRIPTDEPENDENCIES 
+
+.RELEASENOTES
+
+
 #>
 
-[OutputType([pscustomobject])]
+<#
+.SYNOPSIS
+    Get the current logged on user for a machine.
+    
+.DESCRIPTION
+    This function allows you to get the current logged on user for a machine remotely.
+
+.EXAMPLE
+    Get-LoggedOn
+
+    To return the logged on username of the local machine.
+		
+.EXAMPLE
+    Get-LoggedOn -ComputerName Example1
+
+    To return the logged on username of a remote machine.
+
+.EXAMPLE
+    Get-LoggedOn -ComputerName Example1,Example2,Example3
+
+    To return the logged on username of multiple remote machines.
+
+.PARAMETER ComputerName
+    The computer name that you would like to retieve information from.
+        
+.PARAMETER Credential
+    Credentials to access WMI on the remote computer.	
+#>
 [cmdletbinding()]
 
 param(
-[Parameter(ValueFromPipeline = $true,ValueFromPipelineByPropertyName=$True)][string[]]$ComputerName = $env:COMPUTERNAME
+    [Parameter(ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $True)][string[]]$ComputerName = $env:COMPUTERNAME,
+    [pscredential]$Credential
 )
 
-Begin { 
+begin {
 
-Write-Verbose "Grabbing user account logged in."
-$ErrorActionPreference = 'Stop'
-}
+    $GetLoggedOnScriptBlock = {
+        param(
+            [string]$Computer,
+            [pscredential]$Credential
+        )
+        $WmiSplat = @{
+            "Class"        = "win32_computersystem";
+            "ComputerName" = $Computer
+        }
 
-Process {
+        if ($Credential) {
+            $WmiSplat.Add("Credential", $Credential)
+        }
 
-foreach ($comp in $ComputerName)
-{
-    try
-    {
-        $loggedOn = Get-WmiObject -Class win32_computersystem -ComputerName $comp | Select-Object -ExpandProperty UserName
-        $output = @{ "ComputerName" = $comp; UserName = if (!$loggedOn) { $false } Else { $loggedOn } }
-        [PSCustomObject]$output
+        try {
+            $WmiQuery = Get-WmiObject @WmiSplat -ErrorAction Stop
+            New-Object -TypeName "pscustomobject" -Property @{
+                "ComputerName" = $Computer;
+                "UserName"     = $WmiQuery.UserName
+            }
+        }
+        catch {
+            $ErrorDetails = $PSItem
+
+            switch ($ErrorDetails.FullyQualifiedErrorId) {
+                "GetWMICOMException,Microsoft.PowerShell.Commands.GetWmiObjectCommand" {
+                    Write-Warning "$($Computer) - Connection timed out."
+                    New-Object -TypeName "pscustomobject" -Property @{
+                        "ComputerName" = $Computer;
+                        "UserName"     = "N/A (Reason: Timeout)"
+                    }
+                }
+                default {
+                    Write-Warning "$($Computer) - $($ErrorDetails.Exception.Message)"
+                    New-Object -TypeName "pscustomobject" -Property @{
+                        "ComputerName" = $Computer;
+                        "UserName"     = "N/A (Reason: $($ErrorDetails.Exception.Message))"
+                    }
+                }
+            }
+        }
     }
-    catch [Exception]
-    {
-        $errorException = $_.Exception.Message
-        Write-Warning "$comp failed with error message:`n$errorException"
-        continue
+}
+
+process {
+
+    $ScriptJobs = @()
+    foreach ($Computer in $ComputerName) {
+        
+        $ScriptJobs += Start-Job -Name "Get-LoggedOn" -ScriptBlock $GetLoggedOnScriptBlock -ArgumentList $Computer, $Credential
+        
+    }
+
+    $null = Wait-Job -Job $ScriptJobs
+
+    $return = @()
+    $JobData = Receive-Job -Job $ScriptJobs
+
+    foreach ($d in $JobData) {
+        $return += New-Object -TypeName "pscustomobject" -Property @{
+            "ComputerName" = $d.ComputerName;
+            "UserName"     = $d.UserName
+        }
     }
 
 
 }
 
-}
+end {
+
+    return $return
 
 }
