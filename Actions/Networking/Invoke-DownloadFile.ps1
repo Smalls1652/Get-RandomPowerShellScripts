@@ -1,7 +1,7 @@
 
 <#PSScriptInfo
 
-.VERSION 19.05.21
+.VERSION 19.05.24
 
 .GUID d1de0de3-d0f2-4094-a2f2-f75cd8d0fab3
 
@@ -26,11 +26,13 @@
 .EXTERNALSCRIPTDEPENDENCIES
 
 .RELEASENOTES
-Fixed paths with no filename to use the name of the downloaded file.
+Fixed current dir paths
 
 .PRIVATEDATA
 
 #> 
+
+
 
 
 
@@ -80,7 +82,7 @@ switch ($Path) {
 
         $Path = "$($Path)$($URLParser.Matches.Groups[1].Value)"
     }
-    { ($PSItem -eq $null) } {
+    Default {
         Write-Verbose "Path parameter not set, parsing Url for filename."
         $URLParser = $Url | Select-String -Pattern ".*\:\/\/.*\/(.*\.{1}\w*).*" -List
 
